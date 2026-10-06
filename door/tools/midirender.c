@@ -397,7 +397,11 @@ int main(int argc, char **argv)
     tsf_set_output(synth, TSF_STEREO_INTERLEAVED, RATE, GAIN_DB);
     tsf_set_max_voices(synth, 256);
 
+#ifdef _WIN32
+    mkdir(argv[3]);             /* Windows (MSYS2/mingw): no mode argument */
+#else
     mkdir(argv[3], 0755);
+#endif
     snprintf(path, sizeof(path), "%s/tracks.txt", argv[3]);
     list = fopen(path, "w");
     if (list == NULL)

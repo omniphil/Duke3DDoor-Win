@@ -48,7 +48,8 @@ stdout, in raw mode, XON/XOFF off (Ctrl-Q reaches it).
 
 ## Windows (Mystic for Windows)
 
-1. Build on Linux/WSL with mingw-w64 (`sudo apt install mingw-w64`):
+1. Build on Windows with MSYS2 (`make duke3ddoor.exe WIN64_CC=gcc` in the MINGW64 shell), or on Linux/WSL with
+   mingw-w64 (`sudo apt install mingw-w64`); the top-level README has both, step by step.
    `make win64` makes `duke3ddoor.exe`, **the Windows door** (64-bit, for any current Windows; this is the one that is
    tested). Linked statically: it needs only Windows' own DLLs (kernel32, msvcrt, ws2_32, shell32).
    Untested extra: `make win32` makes `win32/duke3ddoor.exe` for 32-bit Windows. It compiles and links but has never

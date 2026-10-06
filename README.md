@@ -32,17 +32,71 @@ what the GNU GPL asks for (see `door/LICENSE.md`). It is the address the Windows
 
 ## Build
 
-On Linux or WSL, with mingw-w64 (`sudo apt install mingw-w64`) for the Windows door and
-[wasi-sdk](https://github.com/WebAssembly/wasi-sdk) 34 in `~/tools` for the TRACE module:
+Two ways to build the same thing; pick whichever suits you. Both end with these files in `door/`, which go to the BBS
+(see `door/INSTALL.md`, "Windows"): `duke3ddoor.exe`, `duke3d.wasm`, `duke3d.pak`, `music\`, `sound\`, `LICENSE.md`.
 
-```
-sh tools/get_shareware.sh                         # the shareware data, into data/
-make -C module && cp module/duke3d.wasm door/     # the TRACE module
-python3 tools/mkpak.py data/DUKE3D.GRP third_party/soundfont/TimGM6mb.sf2 door/duke3d.pak
-make -C door win64                                # door/duke3ddoor.exe (64-bit; make win32 for 32-bit, untested)
-make -C door music sound                          # the JPEG XL mode's sound (needs ffmpeg with libvorbis)
-```
+What gets built:
 
-`door/music/` and `door/sound/` are made from 3D Realms' data, so they aren't in the repository. Without them the
-JPEG XL mode plays silently (TRACE and ANSI don't use them). Installing in Mystic for Windows: `door/INSTALL.md`,
-"Windows". Plain `make -C door` builds the Linux door from the same source.
+| Step | Makes | Needs |
+|---|---|---|
+| shareware data | `data/DUKE3D.GRP` | curl, python3 |
+| TRACE module | `module/duke3d.wasm` | [wasi-sdk](https://github.com/WebAssembly/wasi-sdk/releases/tag/wasi-sdk-34) 34 |
+| data pack | `door/duke3d.pak` | python3 |
+| the door | `door/duke3ddoor.exe` | a mingw-w64 gcc with POSIX threads, make, patch |
+| JPEG XL sound | `door/music/`, `door/sound/` | gcc, python3, ffmpeg with libvorbis (optional: without them the JPEG XL mode is silent) |
+
+### On Windows (MSYS2)
+
+1. Install [MSYS2](https://www.msys2.org/) and open the **MSYS2 MINGW64** shell from the Start menu (not "MSYS2 MSYS"
+   or UCRT64: the commands below assume MINGW64).
+2. Install the tools:
+
+   ```
+   pacman -S --needed make patch curl git mingw-w64-x86_64-gcc mingw-w64-x86_64-python mingw-w64-x86_64-ffmpeg
+   ```
+
+3. Unpack wasi-sdk for Windows (`wasi-sdk-34.0-x86_64-windows.tar.gz` from the release page above), for example to
+   `C:\wasi-sdk`:
+
+   ```
+   mkdir -p /c/wasi-sdk && tar -xzf ~/Downloads/wasi-sdk-34.0-x86_64-windows.tar.gz -C /c/wasi-sdk --strip-components=1
+   ```
+
+4. Build (in the folder you cloned this repository to, e.g. `cd /c/src/Duke3DDoor-Win`):
+
+   ```
+   sh tools/get_shareware.sh
+   make -C module WASI_SDK=/c/wasi-sdk && cp module/duke3d.wasm door/
+   python3 tools/mkpak.py data/DUKE3D.GRP third_party/soundfont/TimGM6mb.sf2 door/duke3d.pak
+   make -C door duke3ddoor.exe WIN64_CC=gcc
+   make -C door music sound
+   ```
+
+   MSYS2's MINGW64 `gcc` is a mingw-w64 compiler with POSIX threads, so it stands in for the cross-compiler the
+   Makefile names (`WIN64_CC=gcc`). The .exe is linked statically and needs no MSYS2 DLLs on the BBS machine.
+
+### On Linux or WSL (cross-compiling)
+
+1. Tools (Debian, Ubuntu, Mint; WSL's Ubuntu too):
+
+   ```
+   sudo apt install build-essential mingw-w64 python3 curl ffmpeg
+   ```
+
+2. Unpack wasi-sdk for Linux (`wasi-sdk-34.0-x86_64-linux.tar.gz`) into `~/tools`, which is where the module's
+   Makefile looks (or give `WASI_SDK=<folder>`).
+3. Build:
+
+   ```
+   sh tools/get_shareware.sh
+   make -C module && cp module/duke3d.wasm door/
+   python3 tools/mkpak.py data/DUKE3D.GRP third_party/soundfont/TimGM6mb.sf2 door/duke3d.pak
+   make -C door win64          # door/duke3ddoor.exe (64-bit); make win32 makes an untested 32-bit one
+   make -C door music sound
+   ```
+
+   Plain `make -C door` builds the Linux door from the same source.
+
+`door/music/` and `door/sound/` are made from 3D Realms' data, so they aren't in the repository. `tools/test_windoor.py`
+(Linux/WSL) tests the finished .exe without a BBS: `tools/winlaunch.c` plays Mystic for Windows, handing the door a
+telnet socket in DOOR32.SYS.
