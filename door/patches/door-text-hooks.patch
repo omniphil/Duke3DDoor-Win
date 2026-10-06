@@ -1,0 +1,82 @@
+--- a/src/game.c	2026-10-06 18:31:59.037788290 -0400
++++ b/src/game.c	2026-10-06 18:31:59.081121622 -0400
+@@ -27,6 +27,10 @@
+ 
+ #include "duke3d.h"
+ 
++/* [duke3d-door] The door's ANSI mode redraws the game's text as text (door/ansi_hud.c) */
++extern void duke_text_hook(int kind, int x, int y, int shade, const char *t);
++extern void duke_cursor_hook(int x, int y);
++
+ #include "scriplib.h"
+ #include "mathutil.h"
+ #include "mouse.h"
+@@ -186,6 +190,7 @@
+     short ac,newx;
+     char centre;
+     const char *oldt;
++    duke_text_hook(1, x, y, s, t);   /* [duke3d-door] */
+ 
+     centre = ( x == (320>>1) );
+     newx = 0;
+@@ -234,6 +239,7 @@
+ {
+     short ac,newx;
+     char centre;
++    duke_text_hook(1, x, y, s, t);   /* [duke3d-door] */
+     const char *oldt;
+ 
+     centre = ( x == (320>>1) );
+@@ -342,6 +348,7 @@
+ {
+     short ac,dastat;
+     char ch;
++    if (!(sb & (MINITEXT_SBAR | MINITEXT_FBAR))) duke_text_hook(2, x, y, 0, t);   /* [duke3d-door] */
+ 
+     dastat = sb & 255;
+ 
+@@ -365,6 +372,7 @@
+ {
+     short ac,dastat;
+     char ch;
++    if (!(sb & (MINITEXT_SBAR | MINITEXT_FBAR))) duke_text_hook(2, x, y, s, t);   /* [duke3d-door] */
+ 
+     dastat = sb & 255;
+ 
+--- a/src/menues.c	2026-10-06 18:31:59.046454955 -0400
++++ b/src/menues.c	2026-10-06 18:31:59.081121622 -0400
+@@ -26,6 +26,10 @@
+ //-------------------------------------------------------------------------
+ 
+ #include "duke3d.h"
++
++/* [duke3d-door] The door's ANSI mode redraws the game's text as text (door/ansi_hud.c) */
++extern void duke_text_hook(int kind, int x, int y, int shade, const char *t);
++extern void duke_cursor_hook(int x, int y);
+ #include "mouse.h"
+ #include "animlib.h"
+ #include "osd.h"
+@@ -705,6 +709,7 @@
+         probey = 0;
+ 
+     if (x|y) {
++        duke_cursor_hook(x, y + probey * i);   /* [duke3d-door] */
+         if(centre)
+         {
+             rotatesprite(((320>>1)+(centre>>1)+70)<<16,(y+(probey*i)-4)<<16,65536L>>type,0,SPINNINGNUKEICON+6-((6+(totalclock>>3))%7),sh,0,10,0,0,xdim-1,ydim-1);
+@@ -763,6 +768,7 @@
+ int menutext(int x,int y,short s,short p,const char *t)
+ {
+     short i, ac, centre;
++    duke_text_hook(0, x, y, s, t);   /* [duke3d-door] */
+ 
+     y -= 12;
+ 
+@@ -878,6 +884,7 @@
+ int menutextc(int x,int y,short s,short p,const char *t)
+ {
+     short i, ac, centre;
++    duke_text_hook(0, x, y, s + 8, t);   /* [duke3d-door] */
+ 
+     s += 8;
+     y -= 12;

@@ -1,0 +1,7 @@
+# 3D Realms' shareware data: fetched by tools/get_shareware.sh, never in the repository
+data/
+# Build output
+module/obj/
+module/duke3d.wasm
+tools/winlaunch.exe
+__pycache__/

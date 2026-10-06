@@ -1,0 +1,221 @@
+# Build Makefile for Microsoft NMake
+
+# Engine options - these may be overridden by game makefiles
+#  USE_POLYMOST   - enables Polymost renderer
+#  USE_OPENGL     - enables OpenGL support in Polymost
+#     Define as 0 to disable OpenGL
+#     Define as 1 (or 2) for GL 2.0/2.1 profile
+#     Define as 3 for GL 3.2 Core profile
+#  USE_ASM        - enables the use of assembly code if supported
+USE_POLYMOST=1
+USE_OPENGL=1
+USE_ASM=1
+
+RELEASE=1
+
+# Create Makefile.msvcuser yourself to provide your own overrides
+# for configurable values
+!if EXIST(Makefile.msvcuser)
+!include Makefile.msvcuser
+!endif
+
+SRC=src
+TOOLS=tools
+INC=include
+LIBSQUISH=libsquish
+
+CC=cl
+AS=ml
+RC=rc
+LINK=link
+
+OURCFLAGS=/nologo /MD /Zl
+OURCXXFLAGS=/nologo /MD /Zl /EHsc
+OURCPPFLAGS=/I$(INC) /I$(SRC) /I$(LIBSQUISH)
+OURASFLAGS=/nologo /coff
+OURLINKFLAGS=/nologo /opt:ref
+OURLIBFLAGS=/nologo
+OURLIBS=msvcrt.lib
+
+!if $(RELEASE)
+# release options
+OURCFLAGS=$(OURCFLAGS) /O2
+OURCXXFLAGS=$(OURCXXFLAGS) /O2
+OURLINKFLAGS=$(OURLINKFLAGS) /RELEASE
+!else
+# debugging options
+OURCFLAGS=$(OURCFLAGS) /Ot /Z7
+OURCXXFLAGS=$(OURCXXFLAGS) /Ot /Z7
+OURCPPFLAGS=$(OURCPPFLAGS) /DDEBUGGINGAIDS
+OURLINKFLAGS=$(OURLINKFLAGS) /DEBUG
+!endif
+
+o=obj
+res=res
+asm=masm
+
+!include Makefile.msvcshared
+
+OURCFLAGS=$(OURCFLAGS) $(BUILDCFLAGS)
+OURCXXFLAGS=$(OURCXXFLAGS) $(BUILDCXXFLAGS)
+OURCPPFLAGS=$(OURCPPFLAGS) $(BUILDCPPFLAGS)
+OURLIBS=$(OURLIBS) $(BUILDLIBS)
+
+ENGINEOBJS=$(SRC)\a-c.$o \
+	$(SRC)\asmprot.$o \
+	$(SRC)\baselayer.$o \
+	$(SRC)\cache1d.$o \
+	$(SRC)\compat.$o \
+	$(SRC)\crc32.$o \
+	$(SRC)\defs.$o \
+	$(SRC)\engine.$o \
+	$(SRC)\kplib.$o \
+	$(SRC)\mmulti.$o \
+	$(SRC)\osd.$o \
+	$(SRC)\pragmas.$o \
+	$(SRC)\scriptfile.$o \
+	$(SRC)\textfont.$o \
+	$(SRC)\talltextfont.$o \
+	$(SRC)\smalltextfont.$o \
+	$(SRC)\winlayer.$o
+
+!if $(USE_ASM)
+ENGINEOBJS=$(ENGINEOBJS) $(SRC)\a.$o
+!endif
+
+!if $(USE_OPENGL)
+ENGINEOBJS=$(ENGINEOBJS) \
+	$(SRC)\glbuild.$o \
+	$(SRC)\glbuild_fs.$o \
+	$(SRC)\glbuild_vs.$o
+!endif
+
+!if $(USE_POLYMOST)
+ENGINEOBJS=$(ENGINEOBJS) $(SRC)\polymost.$o
+
+!if $(USE_OPENGL)
+ENGINEOBJS=$(ENGINEOBJS) \
+	$(SRC)\hightile.$o \
+	$(SRC)\mdsprite.$o \
+	$(SRC)\polymost_fs.$o \
+	$(SRC)\polymost_vs.$o \
+	$(SRC)\polymostaux_fs.$o \
+	$(SRC)\polymostaux_vs.$o \
+	$(SRC)\polymosttex.$o \
+	$(SRC)\polymosttexcache.$o \
+	$(SRC)\polymosttexcompress.$o \
+	$(SRC)\rg_etc1.$o \
+	$(LIBSQUISH)\alpha.$o \
+	$(LIBSQUISH)\clusterfit.$o \
+	$(LIBSQUISH)\colourblock.$o \
+	$(LIBSQUISH)\colourfit.$o \
+	$(LIBSQUISH)\colourset.$o \
+	$(LIBSQUISH)\maths.$o \
+	$(LIBSQUISH)\rangefit.$o \
+	$(LIBSQUISH)\singlecolourfit.$o \
+	$(LIBSQUISH)\squish.$o
+!endif
+!endif
+
+EDITOROBJS=$(SRC)\build.$o \
+	$(SRC)\startwin_editor.$o \
+	$(SRC)\config.$o
+
+# Source-control version stamping
+!if [git --version >nul] == 0
+ENGINEOBJS=$(ENGINEOBJS) $(SRC)\version-auto.$o
+!else
+ENGINEOBJS=$(ENGINEOBJS) $(SRC)\version.$o
+!endif
+
+# RULES
+.SUFFIXES: .masm .cc .glsl
+
+{$(SRC)}.masm{$(SRC)}.$o:
+	$(AS) /c $(ASFLAGS) /Fo$@ $<
+
+{$(SRC)}.c{$(SRC)}.$o:
+	$(CC) /TC /c $(CPPFLAGS) $(OURCPPFLAGS) $(CFLAGS) $(OURCFLAGS) /Fo$@ $<
+
+{$(SRC)}.cc{$(SRC)}.$o:
+	$(CC) /TP /c $(CPPFLAGS) $(OURCPPFLAGS) $(CXXFLAGS) $(OURCXXFLAGS) /Fo$@ $<
+
+{$(SRC)}.cpp{$(SRC)}.$o:
+	$(CC) /TP /c $(CPPFLAGS) $(OURCPPFLAGS) $(CXXFLAGS) $(OURCXXFLAGS) /Fo$@ $<
+
+{$(LIBSQUISH)}.cpp{$(LIBSQUISH)}.$o:
+	$(CC) /TP /c $(CPPFLAGS) $(OURCPPFLAGS) $(CXXFLAGS) $(OURCXXFLAGS) /Fo$@ $<
+
+{$(TOOLS)}.c{$(TOOLS)}.$o:
+	$(CC) /TC /c $(CPPFLAGS) $(OURCPPFLAGS) $(CFLAGS) $(OURCFLAGS) /Fo$@ $<
+
+{$(TOOLS)}.cc{$(TOOLS)}.$o:
+	$(CC) /TP /c $(CPPFLAGS) $(OURCPPFLAGS) $(CXXFLAGS) $(OURCXXFLAGS) /Fo$@ $<
+
+{$(SRC)}.glsl{$(SRC)}.c:
+	if not exist bin2c$(EXESUFFIX) $(MAKE) /f Makefile.msvc /$(MAKEFLAGS) /nologo bin2c$(EXESUFFIX)
+	bin2c$(EXESUFFIX) -text $< default_$(@B)_glsl > $@
+
+# TARGETS
+UTILS=kextract$(EXESUFFIX) kgroup$(EXESUFFIX) klist$(EXESUFFIX) transpal$(EXESUFFIX) wad2map$(EXESUFFIX) wad2map$(EXESUFFIX)
+
+all: libs utils kenbuild ;
+libs: $(ENGINELIB) $(EDITORLIB) ;
+utils: $(UTILS) ;
+
+$(ENGINELIB): $(ENGINEOBJS) $(LIBSQUISHOBJS)
+	lib /out:$@ $(OURLIBFLAGS) $**
+
+$(EDITORLIB): $(EDITOROBJS)
+	lib /out:$@ $(OURLIBFLAGS) $**
+
+
+# the tools
+kextract$(EXESUFFIX): $(TOOLS)\kextract.$o $(SRC)\compat.$o
+	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $(LINKFLAGS) $(OURLINKFLAGS) $** $(OURLIBS)
+
+kgroup$(EXESUFFIX): $(TOOLS)\kgroup.$o $(SRC)\compat.$o
+	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $(LINKFLAGS) $(OURLINKFLAGS) $** $(OURLIBS)
+
+klist$(EXESUFFIX): $(TOOLS)\klist.$o $(SRC)\compat.$o $(SRC)\crc32.$o
+	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $(LINKFLAGS) $(OURLINKFLAGS) $** $(OURLIBS)
+
+transpal$(EXESUFFIX): $(TOOLS)\transpal.$o $(SRC)\pragmas.$o $(SRC)\compat.$o
+	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $(LINKFLAGS) $(OURLINKFLAGS) $** $(OURLIBS)
+
+wad2map$(EXESUFFIX): $(TOOLS)\wad2map.$o $(SRC)\pragmas.$o $(SRC)\compat.$o
+	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $(LINKFLAGS) $(OURLINKFLAGS) $** $(OURLIBS)
+
+wad2art$(EXESUFFIX): $(TOOLS)\wad2art.$o $(SRC)\pragmas.$o $(SRC)\compat.$o
+	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $(LINKFLAGS) $(OURLINKFLAGS) $** $(OURLIBS)
+
+bin2c$(EXESUFFIX): $(TOOLS)\bin2c.$o
+	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $(LINKFLAGS) $(OURLINKFLAGS) $** $(OURLIBS)
+
+arttool$(EXESUFFIX): $(TOOLS)\arttool.$o
+	$(LINK) /OUT:$@ /SUBSYSTEM:CONSOLE $(LINKFLAGS) $(OURLINKFLAGS) $** $(OURLIBS)
+
+$(SRC)\version-auto.c: ALWAYSBUILD
+	cmd /c $(TOOLS)\generateversion.cmd > $@
+
+ALWAYSBUILD: ;
+
+# DEPENDENCIES
+!include Makefile.deps
+
+# PHONIES
+kenbuild: ALWAYSBUILD
+	cd kenbuild
+	$(MAKE) /nologo /f Makefile.msvc /$(MAKEFLAGS) USE_POLYMOST=$(USE_POLYMOST) USE_OPENGL=$(USE_OPENGL) USE_ASM=$(USE_ASM) RELEASE=$(RELEASE)
+	cd "$(MAKEDIR)"
+
+clean::
+	-del /q $(ENGINEOBJS) $(LIBSQUISHOBJS) $(EDITOROBJS)
+veryclean:: clean
+	-del /q $(ENGINELIB) $(EDITORLIB) $(UTILS)
+
+clean veryclean::
+	cd kenbuild
+	-$(MAKE) /nologo /f Makefile.msvc $@
+	cd "$(MAKEDIR)"
+

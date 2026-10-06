@@ -1,0 +1,22 @@
+# Build output
+obj/
+duke3ddoor
+duke3ddoor.exe
+win32/
+midirender
+__pycache__/
+
+# Players' files, and what's made from 3D Realms' data: ship with the door, never in the public source
+saves/
+duke3d.pak
+music/
+sound/
+
+# Built from ../module (copied in by make install)
+duke3d.wasm
+
+# The game's sources copied in by `make bundle` for the BBS box (they're in ../third_party and ../module already)
+native/
+
+# Test output (test_ansi.py, tools/fake_cterm.py)
+test_out/

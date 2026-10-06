@@ -1,0 +1,68 @@
+CC=cl
+CFLAGS=/nologo /O2
+CPPFLAGS=
+o=obj
+
+!if EXIST(Makefile.msvcuser)
+!include Makefile.msvcuser
+!endif
+
+JFAUDIOLIB_CFLAGS=/MD /J
+JFAUDIOLIB_CPPFLAGS=/Iinclude /Isrc
+JFAUDIOLIB_LINKFLAGS=
+
+SOURCES=src\drivers.c \
+        src\fx_man.c \
+        src\cd.c \
+        src\multivoc.c \
+        src\mix.c \
+        src\mixst.c \
+        src\pitch.c \
+        src\vorbis.c \
+        src\music.c \
+        src\midi.c \
+        src\driver_nosound.c \
+        src\driver_directsound.c \
+        src\driver_winmm.c \
+        src\driver_xaudio2.c \
+        src\asssys.c
+
+!include Makefile.msvcshared
+
+!if "$(PLATFORM)" == ""
+PLATFORM=x86
+!endif
+!if "$(PLATFORM)" == "X86" || "$(PLATFORM)" == "x86"
+CFLAGS=$(CFLAGS) /arch:IA32
+!endif
+
+!if $(JFAUDIOLIB_HAVE_VORBIS)
+JFAUDIOLIB_CPPFLAGS=$(JFAUDIOLIB_CPPFLAGS) /DHAVE_VORBIS /Ithird-party\msvc\include
+JFAUDIOLIB_LINKFLAGS=$(JFAUDIOLIB_LINKFLAGS) /LIBPATH:$(MAKEDIR)\third-party\msvc\lib$(PLATFORM)
+!endif
+
+!if $(JFAUDIOLIB_HAVE_XAUDIO2)
+JFAUDIOLIB_CPPFLAGS=$(JFAUDIOLIB_CPPFLAGS) /DHAVE_XAUDIO2
+JFAUDIOLIB_LINKFLAGS=$(JFAUDIOLIB_LINKFLAGS) /LIBPATH:$(MAKEDIR)\third-party\msvc\lib$(PLATFORM)
+!endif
+
+OBJECTS=$(SOURCES:.c=.obj)
+
+all: $(JFAUDIOLIB) test.exe
+
+!include Makefile.deps
+
+$(JFAUDIOLIB): $(OBJECTS)
+	lib /out:$@ /nologo $**
+
+test.exe: src\test.obj $(JFAUDIOLIB)
+	link /out:$@ /nologo $** $(JFAUDIOLIB_LINKFLAGS) user32.lib
+!if DEFINED(XAUDIO2REDIST)
+	copy $(XAUDIO2REDIST)\bin\xaudio2_9redist.dll $(GAMEDATA)
+!endif
+
+{src}.c{src}.obj:
+	$(CC) /c $(CPPFLAGS) $(JFAUDIOLIB_CPPFLAGS) $(CFLAGS) $(JFAUDIOLIB_CFLAGS) /Fo$@ $<
+
+clean:
+	-del /q $(OBJECTS) $(JFAUDIOLIB) src\test.obj test.exe
